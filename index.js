@@ -18,6 +18,7 @@ app.get('/', (req, res) => {
 const PORT = process.env.PORT || 3000;
 
 const UserSchema = new mongoose.Schema({
+  username: { type: String, required: true, unique: true },
   email: { type: String, required: true, unique: true },
   verified: { type: Boolean, default: false },
   verificationTokenHash: String,
@@ -34,8 +35,20 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const emailSchema = Joi.object({
-  email: Joi.string().email().required(),
+// Validatie schema: username en email verplicht
+const registerSchema = Joi.object({
+  username: Joi.string().alphanum().min(3).max(30).required()
+    .messages({
+      'string.alphanum': 'Username mag alleen letters en cijfers bevatten',
+      'string.min': 'Username moet minstens 3 tekens lang zijn',
+      'string.max': 'Username mag maximaal 30 tekens lang zijn',
+      'any.required': 'Username is verplicht',
+    }),
+  email: Joi.string().email().required()
+    .messages({
+      'string.email': 'Emailadres is ongeldig',
+      'any.required': 'Emailadres is verplicht',
+    }),
 });
 
 async function generateHashedToken() {
@@ -46,26 +59,31 @@ async function generateHashedToken() {
 
 app.post('/register', async (req, res) => {
   try {
-    const { error, value } = emailSchema.validate(req.body);
+    const { error, value } = registerSchema.validate(req.body);
     if (error) return res.status(400).json({ error: error.details[0].message });
 
-    const { email } = value;
+    const { username, email } = value;
 
-    let user = await User.findOne({ email });
-    if (user && user.verified) {
-      return res.status(400).json({ error: 'Email is already verified' });
+    // Check of username of email al bestaat (ongeacht verified)
+    let userByUsername = await User.findOne({ username });
+    if (userByUsername) {
+      return res.status(400).json({ error: 'Username is al in gebruik' });
     }
+    let userByEmail = await User.findOne({ email });
+    if (userByEmail && userByEmail.verified) {
+      return res.status(400).json({ error: 'Email is al geregistreerd en geverifieerd' });
+    }
+
+    // Als email al bestaat maar niet geverifieerd is, gebruiken we die user anders maken we nieuwe aan
+    let user = userByEmail || new User({ username, email });
 
     const { token, hash } = await generateHashedToken();
-    const expires = Date.now() + 60 * 60 * 1000; // 1 hour
-
-    if (!user) {
-      user = new User({ email });
-    }
+    const expires = Date.now() + 60 * 60 * 1000; // 1 uur
 
     user.verificationTokenHash = hash;
     user.verificationTokenExpires = expires;
     user.verified = false;
+    user.username = username; // update username als gebruiker al bestond zonder
 
     await user.save();
 
