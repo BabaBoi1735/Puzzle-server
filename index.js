@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const express = require('express');
 const mongoose = require('mongoose');
+const path = require('path');
 const app = express();
 
 const PORT = process.env.PORT || 3000;
@@ -9,6 +10,8 @@ const HOST = '0.0.0.0';
 const MONGO_URI = process.env.MONGO_URI;
 
 app.use(express.json());
+
+app.use(express.static(path.join(__dirname, 'public')));
 
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true },
@@ -19,10 +22,6 @@ const User = mongoose.model('User', userSchema);
 mongoose.connect(MONGO_URI)
   .then(() => console.log('✅ Verbonden met MongoDB'))
   .catch(err => console.error('❌ MongoDB error:', err));
-
-app.get('/', (req, res) => {
-  res.send('Puzzle game server');
-});
 
 app.post('/users', async (req, res) => {
   try {
