@@ -267,10 +267,25 @@ app.post('/users', async (req, res) => {
 
   try {
     let user = await User.findOne({ email });
+
     if (user) {
       if (user.verified) {
-        return res.status(400).json({ error: 'This email is already verified.' });
+        // Allow re-verification attempt: reset verified to false and resend email
+        user.verified = false;
+        user.verificationToken = crypto.randomBytes(32).toString('hex');
+        await user.save();
+
+        const verifyLink = `${req.protocol}://${req.get('host')}/verify?token=${user.verificationToken}`;
+        await transporter.sendMail({
+          from: process.env.EMAIL_USER,
+          to: email,
+          subject: 'Please verify your email',
+          html: `<p>Hi ${user.username},</p><p>Click the link below to verify your email:</p><a href="${verifyLink}">${verifyLink}</a>`,
+        });
+
+        return res.status(200).json({ message: 'Verification email sent again. Please verify your email.' });
       } else {
+        // User not verified yet - resend the existing token
         const verifyLink = `${req.protocol}://${req.get('host')}/verify?token=${user.verificationToken}`;
         await transporter.sendMail({
           from: process.env.EMAIL_USER,
@@ -282,6 +297,7 @@ app.post('/users', async (req, res) => {
       }
     }
 
+    // New user
     const token = crypto.randomBytes(32).toString('hex');
     user = new User({ username, email, verificationToken: token });
     await user.save();
