@@ -7,14 +7,11 @@ const port = 3000;
 const CLIENT_ID = '6337326817362425692';
 const CLIENT_SECRET = 'RBX-PJRRoHEmAkyvtO9BAsosL1WbY2IqTTxCtt07BRzvNquH1nymvZbpB682VYzDzOwI';
 
-// Dit moet je aanpassen naar jouw Roblox universe en datastore
-const UNIVERSE_ID = '8122261455';       // vervang door je eigen universe id
-const DATA_STORE_ID = 'PlayerLevels'; // vervang door jouw datastore naam
+const UNIVERSE_ID = '8122261455';       // jouw universe id
+const DATA_STORE_ID = 'PlayerLevels';  // jouw datastore naam
 
-// Middleware om JSON body te parsen
 app.use(express.json());
 
-// Frontend HTML + JS
 const html = `
 <!DOCTYPE html>
 <html lang="en">
@@ -73,7 +70,6 @@ app.get('/', (req, res) => {
   res.send(html);
 });
 
-// Functie om OAuth token te krijgen
 async function getAccessToken() {
   const tokenUrl = 'https://apis.roblox.com/oauth/token';
   const authHeader = 'Basic ' + Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64');
@@ -91,13 +87,15 @@ async function getAccessToken() {
     body: params.toString()
   });
 
-  if (!res.ok) throw new Error(`Failed to get token: ${res.status}`);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to get token: ${res.status} - ${text}`);
+  }
 
   const data = await res.json();
   return data.access_token;
 }
 
-// API endpoint: haal data store entries op voor gegeven userId
 app.post('/api/datastore-entries', async (req, res) => {
   const { userId } = req.body;
 
@@ -108,8 +106,6 @@ app.post('/api/datastore-entries', async (req, res) => {
   try {
     const token = await getAccessToken();
 
-    // Voorbeeld: data store entry key = userId (of username)
-    // Pas dit aan aan jouw datamodel!
     const entryId = encodeURIComponent(userId);
 
     const url = `https://apis.roblox.com/cloud/v2/universes/${UNIVERSE_ID}/data-stores/${DATA_STORE_ID}/entries/${entryId}`;
@@ -119,7 +115,7 @@ app.post('/api/datastore-entries', async (req, res) => {
     });
 
     if (apiRes.status === 404) {
-      return res.status(404).json({ error: 'Entry not found for user: ' + userId });
+      return res.status(404).json({ error: `Entry not found for user: ${userId}` });
     }
     if (!apiRes.ok) {
       const text = await apiRes.text();
@@ -130,6 +126,7 @@ app.post('/api/datastore-entries', async (req, res) => {
     res.json(data);
 
   } catch (e) {
+    console.error('Server error:', e);
     res.status(500).json({ error: e.message });
   }
 });
