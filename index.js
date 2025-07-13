@@ -53,7 +53,7 @@ app.post('/register', async (req, res) => {
     }
 
     const { token, hash } = await generateHashedToken();
-    const expires = Date.now() + 60 * 60 * 1000;
+    const expires = Date.now() + 60 * 60 * 1000; // 1 hour
 
     if (!user) {
       user = new User({ email });
