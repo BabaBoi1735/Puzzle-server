@@ -1,11 +1,18 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
+import cors from 'cors';
 
 dotenv.config();
 
 const app = express();
 app.use(express.json()); // Body parser voor JSON
+
+// CORS middleware toevoegen, zodat headers als Content-Type toegestaan worden
+app.use(cors({
+  origin: '*', // staat alle domeinen toe, voor dev kan je dit later specifieker maken
+  allowedHeaders: ['Content-Type', 'Authorization'], // headers die je toestaat
+}));
 
 const PORT = process.env.PORT || 3000;
 
