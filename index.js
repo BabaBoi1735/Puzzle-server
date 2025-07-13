@@ -63,7 +63,6 @@ app.get('/', (req, res) => {
 
 const ROBLOX_API_BASE = 'https://accountinformation.roblox.com/v1';
 
-// Proxy endpoints to avoid CORS & hide direct URLs
 app.get('/api/birthdate', async (req, res) => {
   try {
     const apiRes = await fetch(`${ROBLOX_API_BASE}/birthdate`);
