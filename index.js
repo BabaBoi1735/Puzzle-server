@@ -11,6 +11,10 @@ dotenv.config();
 const app = express();
 app.use(express.json());
 
+app.get('/', (req, res) => {
+  res.send('Welcome to the Puzzle Game Email Verification API');
+});
+
 const PORT = process.env.PORT || 3000;
 
 const UserSchema = new mongoose.Schema({
