@@ -6,7 +6,6 @@ const crypto = require('crypto');
 const app = express();
 
 const PORT = process.env.PORT || 3000;
-const HOST = process.env.HOST || 'localhost';
 const MONGO_URI = process.env.MONGO_URI;
 
 app.use(express.json());
@@ -147,7 +146,7 @@ app.post('/users', async (req, res) => {
       if (existingUser.verified) {
         return res.status(400).json({ error: 'This email is already verified.' });
       } else {
-        const verifyLink = `http://${HOST}:${PORT}/verify?token=${existingUser.verificationToken}`;
+        const verifyLink = `http://${req.headers.host}/verify?token=${existingUser.verificationToken}`;
         await transporter.sendMail({
           from: process.env.EMAIL_USER,
           to: email,
@@ -168,7 +167,7 @@ app.post('/users', async (req, res) => {
 
     await newUser.save();
 
-    const verifyLink = `http://${HOST}:${PORT}/verify?token=${token}`;
+    const verifyLink = `http://${req.headers.host}/verify?token=${token}`;
 
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
@@ -206,6 +205,6 @@ app.get('/verify', async (req, res) => {
   }
 });
 
-app.listen(PORT, HOST, () => {
-  console.log(`🚀 Server running at http://${HOST}:${PORT}`);
+app.listen(PORT, () => {
+  console.log(`🚀 Server running at http://localhost:${PORT}`);
 });
