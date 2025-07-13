@@ -1,16 +1,34 @@
 import express from 'express';
-import fetch from 'node-fetch';
+import mongoose from 'mongoose';
+import crypto from 'crypto';
 
 const app = express();
 const port = 3000;
 
-const CLIENT_ID = '6337326817362425692';
-const CLIENT_SECRET = 'RBX-PJRRoHEmAkyvtO9BAsosL1WbY2IqTTxCtt07BRzvNquH1nymvZbpB682VYzDzOwI';
+const MONGO_URI = 'mongodb+srv://andrewbeijnen:Mcdonalds1@tonelabaccounts.inacdvb.mongodb.net/jeDatabaseNaam?retryWrites=true&w=majority';
+await mongoose.connect(MONGO_URI);
+console.log('Connected to MongoDB');
 
-const UNIVERSE_ID = '8122261455';       // jouw universe id
-const DATA_STORE_ID = 'PlayerLevels';  // jouw datastore naam
+// User schema
+const userSchema = new mongoose.Schema({
+  username: { type: String, unique: true, required: true },
+});
+
+const sessionSchema = new mongoose.Schema({
+  sessionId: { type: String, unique: true, required: true },
+  username: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now, expires: 60 * 60 * 24 }, // 24 uur sessie
+});
+
+const User = mongoose.model('User', userSchema);
+const Session = mongoose.model('Session', sessionSchema);
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+function generateSessionId() {
+  return crypto.randomBytes(16).toString('hex');
+}
 
 const html = `
 <!DOCTYPE html>
@@ -18,48 +36,59 @@ const html = `
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Roblox Data Store Demo</title>
+<title>MongoDB Verification System</title>
 <style>
   body { font-family: Arial, sans-serif; padding: 2rem; background: #f0f0f0; }
   input, button { padding: 0.5rem; font-size: 1rem; margin: 0.5rem 0; }
   button { cursor: pointer; border-radius: 5px; border: none; background: #007bff; color: white; }
   button:hover { background: #0056b3; }
-  pre { background: #222; color: #eee; padding: 1rem; max-height: 400px; overflow-y: auto; border-radius: 5px; }
+  pre { background: #222; color: #eee; padding: 1rem; max-height: 300px; overflow-y: auto; border-radius: 5px; }
 </style>
 </head>
 <body>
-  <h1>Roblox Data Store Viewer</h1>
-  <label for="userid">Enter UserId or Username:</label><br />
-  <input type="text" id="userid" placeholder="UserId or Username" />
-  <button id="fetchBtn">Fetch Data Store Entries</button>
-  <pre id="output">Enter a UserId or Username and click the button</pre>
+  <h1>Basic User Verification with MongoDB</h1>
+  <label for="username">Username:</label><br/>
+  <input type="text" id="username" placeholder="Enter username" /><br/>
+  <button id="registerBtn">Register</button>
+  <button id="loginBtn">Login</button>
+
+  <pre id="output">Please register or login.</pre>
 
   <script>
     const output = document.getElementById('output');
-    const input = document.getElementById('userid');
-    const btn = document.getElementById('fetchBtn');
+    const usernameInput = document.getElementById('username');
 
-    btn.addEventListener('click', async () => {
-      const userId = input.value.trim();
-      if (!userId) {
-        output.textContent = 'Please enter a UserId or Username.';
+    document.getElementById('registerBtn').onclick = async () => {
+      const username = usernameInput.value.trim();
+      if (!username) {
+        output.textContent = 'Please enter a username.';
         return;
       }
-      output.textContent = 'Loading...';
+      output.textContent = 'Registering...';
+      const res = await fetch('/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username })
+      });
+      const data = await res.json();
+      output.textContent = JSON.stringify(data, null, 2);
+    };
 
-      try {
-        const res = await fetch('/api/datastore-entries', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId })
-        });
-        if (!res.ok) throw new Error('HTTP error ' + res.status);
-        const data = await res.json();
-        output.textContent = JSON.stringify(data, null, 2);
-      } catch (e) {
-        output.textContent = 'Error: ' + e.message;
+    document.getElementById('loginBtn').onclick = async () => {
+      const username = usernameInput.value.trim();
+      if (!username) {
+        output.textContent = 'Please enter a username.';
+        return;
       }
-    });
+      output.textContent = 'Logging in...';
+      const res = await fetch('/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username })
+      });
+      const data = await res.json();
+      output.textContent = JSON.stringify(data, null, 2);
+    };
   </script>
 </body>
 </html>
@@ -70,64 +99,38 @@ app.get('/', (req, res) => {
   res.send(html);
 });
 
-async function getAccessToken() {
-  const tokenUrl = 'https://apis.roblox.com/oauth/token';
-  const authHeader = 'Basic ' + Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64');
-
-  const params = new URLSearchParams();
-  params.append('grant_type', 'client_credentials');
-  params.append('scope', 'data_store.read data_store.write');
-
-  const res = await fetch(tokenUrl, {
-    method: 'POST',
-    headers: {
-      'Authorization': authHeader,
-      'Content-Type': 'application/x-www-form-urlencoded'
-    },
-    body: params.toString()
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Failed to get token: ${res.status} - ${text}`);
-  }
-
-  const data = await res.json();
-  return data.access_token;
-}
-
-app.post('/api/datastore-entries', async (req, res) => {
-  const { userId } = req.body;
-
-  if (!userId) {
-    return res.status(400).json({ error: 'Missing userId in body' });
-  }
+app.post('/register', async (req, res) => {
+  const { username } = req.body;
+  if (!username) return res.status(400).json({ error: 'Username required' });
 
   try {
-    const token = await getAccessToken();
+    const existingUser = await User.findOne({ username });
+    if (existingUser) return res.status(400).json({ error: 'Username already exists' });
 
-    const entryId = encodeURIComponent(userId);
+    const newUser = new User({ username });
+    await newUser.save();
 
-    const url = `https://apis.roblox.com/cloud/v2/universes/${UNIVERSE_ID}/data-stores/${DATA_STORE_ID}/entries/${entryId}`;
+    res.json({ message: 'User registered', username });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
-    const apiRes = await fetch(url, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
+app.post('/login', async (req, res) => {
+  const { username } = req.body;
+  if (!username) return res.status(400).json({ error: 'Username required' });
 
-    if (apiRes.status === 404) {
-      return res.status(404).json({ error: `Entry not found for user: ${userId}` });
-    }
-    if (!apiRes.ok) {
-      const text = await apiRes.text();
-      throw new Error(`Roblox API error: ${apiRes.status} - ${text}`);
-    }
+  try {
+    const user = await User.findOne({ username });
+    if (!user) return res.status(400).json({ error: 'User not found' });
 
-    const data = await apiRes.json();
-    res.json(data);
+    const sessionId = generateSessionId();
+    const session = new Session({ sessionId, username });
+    await session.save();
 
-  } catch (e) {
-    console.error('Server error:', e);
-    res.status(500).json({ error: e.message });
+    res.json({ message: 'Logged in', username, sessionId });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
