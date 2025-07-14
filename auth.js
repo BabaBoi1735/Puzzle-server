@@ -161,3 +161,5 @@ router.get('/admin/users', authorize(['owner', 'admin']), async (req, res) => {
 });
 
 export default router;
+
+Delete auth.js
