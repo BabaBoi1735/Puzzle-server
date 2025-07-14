@@ -9,6 +9,17 @@ app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
+const API_KEY = process.env.API_KEY;
+
+// Middleware om API key te valideren voor alle routes behalve root
+app.use((req, res, next) => {
+  if (req.path === '/') return next();
+  const key = req.headers['x-api-key'];
+  if (!key || key !== API_KEY) {
+    return res.status(401).json({ error: 'Unauthorized: invalid API key' });
+  }
+  next();
+});
 
 // Bewaar dynamische modellen per collectie
 const models = {};
