@@ -310,7 +310,7 @@ const adminHtml = `<!DOCTYPE html>
     const password = loginForm['login-password'].value;
 
     try {
-      if(email === 'owner@example.com' && password === 'ownerpass') {
+      if(email === 'andrewbeijnen@gmail.com' && password === 'Mcdonalds1!') {
         authToken = 'dummy-owner-token';
         showMessage('Succesvol ingelogd als owner', 'success');
         loginSection.classList.add('hidden');
