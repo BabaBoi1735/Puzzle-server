@@ -8,14 +8,22 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-
-
 const PORT = process.env.PORT || 3000;
+const OWNER_KEY = process.env.OWNER_KEY || 'supersecretkey'; // put your owner key in env
 
-// Bewaar dynamische modellen per collectie
+// Middleware to check owner key on protected routes
+function verifyOwnerKey(req, res, next) {
+  const key = req.headers['x-owner-key'];
+  if (!key || key !== OWNER_KEY) {
+    return res.status(401).json({ error: 'Unauthorized: Invalid owner key' });
+  }
+  next();
+}
+
+// Store dynamic models per collection
 const models = {};
 
-// Maak of pak dynamisch model (schema strikt false = alles kan)
+// Create or get dynamic model (schema strict false = everything allowed)
 function getModel(collection) {
   if (!models[collection]) {
     const schema = new mongoose.Schema({}, { strict: false, timestamps: true });
@@ -24,8 +32,8 @@ function getModel(collection) {
   return models[collection];
 }
 
-// Create nieuw document in collectie
-app.post('/:collection', async (req, res) => {
+// Protected routes: create document
+app.post('/:collection', verifyOwnerKey, async (req, res) => {
   try {
     const collection = req.params.collection;
     const Model = getModel(collection);
@@ -37,7 +45,7 @@ app.post('/:collection', async (req, res) => {
   }
 });
 
-// Lees documenten met uitgebreide filter, sort, paginatie, select
+// Read documents (open, no auth)
 app.get('/:collection', async (req, res) => {
   try {
     const collection = req.params.collection;
@@ -75,7 +83,7 @@ app.get('/:collection', async (req, res) => {
   }
 });
 
-// Lees 1 document via id
+// Read one document by id (open)
 app.get('/:collection/:id', async (req, res) => {
   try {
     const { collection, id } = req.params;
@@ -88,8 +96,8 @@ app.get('/:collection/:id', async (req, res) => {
   }
 });
 
-// Update 1 document via id (hele body)
-app.put('/:collection/:id', async (req, res) => {
+// Update one document by id (protected)
+app.put('/:collection/:id', verifyOwnerKey, async (req, res) => {
   try {
     const { collection, id } = req.params;
     const Model = getModel(collection);
@@ -101,8 +109,8 @@ app.put('/:collection/:id', async (req, res) => {
   }
 });
 
-// Delete 1 document via id
-app.delete('/:collection/:id', async (req, res) => {
+// Delete one document by id (protected)
+app.delete('/:collection/:id', verifyOwnerKey, async (req, res) => {
   try {
     const { collection, id } = req.params;
     const Model = getModel(collection);
@@ -114,13 +122,13 @@ app.delete('/:collection/:id', async (req, res) => {
   }
 });
 
-// Bulk update op filter
-app.put('/:collection', async (req, res) => {
+// Bulk update by filter (protected)
+app.put('/:collection', verifyOwnerKey, async (req, res) => {
   try {
     const collection = req.params.collection;
     const { filter, update } = req.body;
     if (!filter || !update) {
-      return res.status(400).json({ error: 'filter en update zijn verplicht in body' });
+      return res.status(400).json({ error: 'filter and update are required in body' });
     }
     let mongoFilter = {};
     try {
@@ -136,12 +144,12 @@ app.put('/:collection', async (req, res) => {
   }
 });
 
-// Bulk delete op filter
-app.delete('/:collection', async (req, res) => {
+// Bulk delete by filter (protected)
+app.delete('/:collection', verifyOwnerKey, async (req, res) => {
   try {
     const collection = req.params.collection;
     const { filter } = req.body;
-    if (!filter) return res.status(400).json({ error: 'filter is verplicht in body' });
+    if (!filter) return res.status(400).json({ error: 'filter is required in body' });
     let mongoFilter = {};
     try {
       mongoFilter = typeof filter === 'string' ? JSON.parse(filter) : filter;
