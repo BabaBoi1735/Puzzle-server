@@ -30,11 +30,15 @@ app.post('/:collection', async (req, res) => {
   try {
     const collection = req.params.collection;
     const Model = getModel(collection);
-    const doc = new Model(req.body);
-    const saved = await doc.save();
-    res.status(201).json(saved);
+
+    const filter = { UserId: req.body.UserId };
+    const update = { $set: req.body };
+    const options = { upsert: true, new: true };
+
+    const result = await Model.findOneAndUpdate(filter, update, options);
+    res.status(200).json(result);
   } catch (err) {
-    res.status(500).json({ error: 'Create failed', details: err.message });
+    res.status(500).json({ error: 'Create/update failed', details: err.message });
   }
 });
 
@@ -143,7 +147,7 @@ const start = async () => {
     await mongoose.connect(process.env.MONGO_URI);
     console.log('✅ Connected to MongoDB');
     app.listen(PORT, () => {
-      console.log(🚀 Server running on port ${PORT});
+      console.log(`🚀 Server running on port ${PORT}`);
     });
   } catch (err) {
     console.error('❌ MongoDB connect failed:', err);
