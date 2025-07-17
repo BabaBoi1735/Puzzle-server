@@ -25,20 +25,16 @@ app.get('/', (req, res) => {
   res.send('API is live');
 });
 
-// CREATE or UPDATE document by UserId
+// CREATE document
 app.post('/:collection', async (req, res) => {
   try {
     const collection = req.params.collection;
     const Model = getModel(collection);
-
-    const filter = { UserId: req.body.UserId }; // Zorg dat UserId in payload zit
-    const update = { $set: req.body };
-    const options = { upsert: true, new: true };
-
-    const updated = await Model.findOneAndUpdate(filter, update, options);
-    res.status(200).json(updated);
+    const doc = new Model(req.body);
+    const saved = await doc.save();
+    res.status(201).json(saved);
   } catch (err) {
-    res.status(500).json({ error: 'Upsert failed', details: err.message });
+    res.status(500).json({ error: 'Create failed', details: err.message });
   }
 });
 
@@ -112,21 +108,21 @@ app.delete('/:collection/:id', async (req, res) => {
   }
 });
 
-// BULK update (by filter)
+// BULK update
 app.put('/:collection', async (req, res) => {
   try {
     const { filter, update } = req.body;
     if (!filter || !update) return res.status(400).json({ error: 'filter and update required' });
     let mongoFilter = typeof filter === 'string' ? JSON.parse(filter) : filter;
     const Model = getModel(req.params.collection);
-    const result = await Model.updateMany(mongoFilter, { $set: update });
+    const result = await Model.updateMany(mongoFilter, update);
     res.json({ matchedCount: result.matchedCount, modifiedCount: result.modifiedCount });
   } catch (err) {
     res.status(500).json({ error: 'Bulk update failed', details: err.message });
   }
 });
 
-// BULK delete (by filter)
+// BULK delete
 app.delete('/:collection', async (req, res) => {
   try {
     const { filter } = req.body;
@@ -147,7 +143,7 @@ const start = async () => {
     await mongoose.connect(process.env.MONGO_URI);
     console.log('✅ Connected to MongoDB');
     app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(🚀 Server running on port ${PORT});
     });
   } catch (err) {
     console.error('❌ MongoDB connect failed:', err);
