@@ -25,16 +25,20 @@ app.get('/', (req, res) => {
   res.send('API is live');
 });
 
-// CREATE document
+// CREATE or UPDATE document by UserId
 app.post('/:collection', async (req, res) => {
   try {
     const collection = req.params.collection;
     const Model = getModel(collection);
-    const doc = new Model(req.body);
-    const saved = await doc.save();
-    res.status(201).json(saved);
+
+    const filter = { UserId: req.body.UserId }; // Zorg dat UserId in payload zit
+    const update = { $set: req.body };
+    const options = { upsert: true, new: true };
+
+    const updated = await Model.findOneAndUpdate(filter, update, options);
+    res.status(200).json(updated);
   } catch (err) {
-    res.status(500).json({ error: 'Create failed', details: err.message });
+    res.status(500).json({ error: 'Upsert failed', details: err.message });
   }
 });
 
@@ -108,21 +112,21 @@ app.delete('/:collection/:id', async (req, res) => {
   }
 });
 
-// BULK update
+// BULK update (by filter)
 app.put('/:collection', async (req, res) => {
   try {
     const { filter, update } = req.body;
     if (!filter || !update) return res.status(400).json({ error: 'filter and update required' });
     let mongoFilter = typeof filter === 'string' ? JSON.parse(filter) : filter;
     const Model = getModel(req.params.collection);
-    const result = await Model.updateMany(mongoFilter, update);
+    const result = await Model.updateMany(mongoFilter, { $set: update });
     res.json({ matchedCount: result.matchedCount, modifiedCount: result.modifiedCount });
   } catch (err) {
     res.status(500).json({ error: 'Bulk update failed', details: err.message });
   }
 });
 
-// BULK delete
+// BULK delete (by filter)
 app.delete('/:collection', async (req, res) => {
   try {
     const { filter } = req.body;
