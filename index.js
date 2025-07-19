@@ -25,67 +25,6 @@ app.get('/', (req, res) => {
   res.send('API is live');
 });
 
-// FRIENDS API ROUTES
-
-const ROBLOX_FRIENDS_BASE = 'https://friends.roblox.com/v1';
-
-function getHeaders(cookie) {
-  return {
-    Cookie: `.ROBLOSECURITY=${cookie}`,
-    'Content-Type': 'application/json'
-  };
-}
-
-app.post('/friends/send', async (req, res) => {
-  const { targetUserId, authCookie } = req.body;
-  try {
-    const response = await axios.post(`${ROBLOX_FRIENDS_BASE}/users/${targetUserId}/request-friendship`, {}, {
-      headers: getHeaders(authCookie)
-    });
-    res.json(response.data);
-  } catch (err) {
-    res.status(400).json({ error: 'Failed to send friend request', details: err.response?.data });
-  }
-});
-
-app.post('/friends/accept', async (req, res) => {
-  const { requesterUserId, authCookie } = req.body;
-  try {
-    const response = await axios.post(`${ROBLOX_FRIENDS_BASE}/users/${requesterUserId}/accept-friend-request`, {}, {
-      headers: getHeaders(authCookie)
-    });
-    res.json(response.data);
-  } catch (err) {
-    res.status(400).json({ error: 'Failed to accept friend request', details: err.response?.data });
-  }
-});
-
-app.post('/friends/decline', async (req, res) => {
-  const { requesterUserId, authCookie } = req.body;
-  try {
-    const response = await axios.post(`${ROBLOX_FRIENDS_BASE}/users/${requesterUserId}/decline-friend-request`, {}, {
-      headers: getHeaders(authCookie)
-    });
-    res.json(response.data);
-  } catch (err) {
-    res.status(400).json({ error: 'Failed to decline friend request', details: err.response?.data });
-  }
-});
-
-app.post('/friends/remove', async (req, res) => {
-  const { targetUserId, authCookie } = req.body;
-  try {
-    const response = await axios.post(`${ROBLOX_FRIENDS_BASE}/users/${targetUserId}/unfriend`, {}, {
-      headers: getHeaders(authCookie)
-    });
-    res.json(response.data);
-  } catch (err) {
-    res.status(400).json({ error: 'Failed to unfriend user', details: err.response?.data });
-  }
-});
-
-// GENERIC DATABASE ROUTES
-
 app.post('/:collection', async (req, res) => {
   try {
     const collection = req.params.collection;
@@ -195,6 +134,63 @@ app.delete('/:collection', async (req, res) => {
 });
 
 app.get('/favicon.ico', (req, res) => res.status(204).end());
+
+const ROBLOX_FRIENDS_BASE = 'https://friends.roblox.com/v1';
+
+function getHeaders(authCookie) {
+  return {
+    Cookie: `.ROBLOSECURITY=${authCookie}`,
+    'Content-Type': 'application/json'
+  };
+}
+
+app.post('/friends/send', async (req, res) => {
+  const { targetUserId, authCookie } = req.body;
+  try {
+    const response = await axios.post(`${ROBLOX_FRIENDS_BASE}/users/${targetUserId}/request-friendship`, {}, {
+      headers: getHeaders(authCookie)
+    });
+    res.json(response.data);
+  } catch (err) {
+    res.status(400).json({ error: 'Failed to send friend request', details: err.response?.data });
+  }
+});
+
+app.post('/friends/accept', async (req, res) => {
+  const { requesterUserId, authCookie } = req.body;
+  try {
+    const response = await axios.post(`${ROBLOX_FRIENDS_BASE}/users/${requesterUserId}/accept-friend-request`, {}, {
+      headers: getHeaders(authCookie)
+    });
+    res.json(response.data);
+  } catch (err) {
+    res.status(400).json({ error: 'Failed to accept friend request', details: err.response?.data });
+  }
+});
+
+app.post('/friends/decline', async (req, res) => {
+  const { requesterUserId, authCookie } = req.body;
+  try {
+    const response = await axios.post(`${ROBLOX_FRIENDS_BASE}/users/${requesterUserId}/decline-friend-request`, {}, {
+      headers: getHeaders(authCookie)
+    });
+    res.json(response.data);
+  } catch (err) {
+    res.status(400).json({ error: 'Failed to decline friend request', details: err.response?.data });
+  }
+});
+
+app.post('/friends/remove', async (req, res) => {
+  const { targetUserId, authCookie } = req.body;
+  try {
+    const response = await axios.post(`${ROBLOX_FRIENDS_BASE}/users/${targetUserId}/unfriend`, {}, {
+      headers: getHeaders(authCookie)
+    });
+    res.json(response.data);
+  } catch (err) {
+    res.status(400).json({ error: 'Failed to unfriend user', details: err.response?.data });
+  }
+});
 
 const start = async () => {
   try {
