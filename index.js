@@ -137,15 +137,16 @@ app.get('/favicon.ico', (req, res) => res.status(204).end());
 
 const ROBLOX_FRIENDS_BASE = 'https://friends.roblox.com/v1';
 
-function getHeaders(authCookie) {
+function getHeaders(cookie) {
   return {
-    Cookie: `.ROBLOSECURITY=${authCookie}`,
+    Cookie: `.ROBLOSECURITY=${cookie}`,
     'Content-Type': 'application/json'
   };
 }
 
 app.post('/friends/send', async (req, res) => {
-  const { targetUserId, authCookie } = req.body;
+  const { targetUserId } = req.body;
+  const authCookie = process.env.ROBLOX_COOKIE;
   try {
     const response = await axios.post(`${ROBLOX_FRIENDS_BASE}/users/${targetUserId}/request-friendship`, {}, {
       headers: getHeaders(authCookie)
@@ -157,7 +158,8 @@ app.post('/friends/send', async (req, res) => {
 });
 
 app.post('/friends/accept', async (req, res) => {
-  const { requesterUserId, authCookie } = req.body;
+  const { requesterUserId } = req.body;
+  const authCookie = process.env.ROBLOX_COOKIE;
   try {
     const response = await axios.post(`${ROBLOX_FRIENDS_BASE}/users/${requesterUserId}/accept-friend-request`, {}, {
       headers: getHeaders(authCookie)
@@ -169,7 +171,8 @@ app.post('/friends/accept', async (req, res) => {
 });
 
 app.post('/friends/decline', async (req, res) => {
-  const { requesterUserId, authCookie } = req.body;
+  const { requesterUserId } = req.body;
+  const authCookie = process.env.ROBLOX_COOKIE;
   try {
     const response = await axios.post(`${ROBLOX_FRIENDS_BASE}/users/${requesterUserId}/decline-friend-request`, {}, {
       headers: getHeaders(authCookie)
@@ -181,7 +184,8 @@ app.post('/friends/decline', async (req, res) => {
 });
 
 app.post('/friends/remove', async (req, res) => {
-  const { targetUserId, authCookie } = req.body;
+  const { targetUserId } = req.body;
+  const authCookie = process.env.ROBLOX_COOKIE;
   try {
     const response = await axios.post(`${ROBLOX_FRIENDS_BASE}/users/${targetUserId}/unfriend`, {}, {
       headers: getHeaders(authCookie)
