@@ -2,6 +2,7 @@ import express from 'express';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import axios from 'axios';
 
 dotenv.config();
 
@@ -10,8 +11,8 @@ app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
-
 const models = {};
+
 function getModel(collection) {
   if (!models[collection]) {
     const schema = new mongoose.Schema({}, { strict: false, timestamps: true });
@@ -20,12 +21,12 @@ function getModel(collection) {
   return models[collection];
 }
 
-// Basis route
 app.get('/', (req, res) => {
   res.send('API is live');
 });
 
-// CREATE document
+// DYNAMISCHE DATABASE ROUTES
+
 app.post('/:collection', async (req, res) => {
   try {
     const collection = req.params.collection;
@@ -42,7 +43,6 @@ app.post('/:collection', async (req, res) => {
   }
 });
 
-// READ all met filter, sort, select, limit, skip
 app.get('/:collection', async (req, res) => {
   try {
     const collection = req.params.collection;
@@ -76,7 +76,6 @@ app.get('/:collection', async (req, res) => {
   }
 });
 
-// READ by ID
 app.get('/:collection/:id', async (req, res) => {
   try {
     const Model = getModel(req.params.collection);
@@ -88,7 +87,6 @@ app.get('/:collection/:id', async (req, res) => {
   }
 });
 
-// UPDATE by ID
 app.put('/:collection/:id', async (req, res) => {
   try {
     const Model = getModel(req.params.collection);
@@ -100,7 +98,6 @@ app.put('/:collection/:id', async (req, res) => {
   }
 });
 
-// DELETE by ID
 app.delete('/:collection/:id', async (req, res) => {
   try {
     const Model = getModel(req.params.collection);
@@ -112,7 +109,6 @@ app.delete('/:collection/:id', async (req, res) => {
   }
 });
 
-// BULK update
 app.put('/:collection', async (req, res) => {
   try {
     const { filter, update } = req.body;
@@ -126,7 +122,6 @@ app.put('/:collection', async (req, res) => {
   }
 });
 
-// BULK delete
 app.delete('/:collection', async (req, res) => {
   try {
     const { filter } = req.body;
@@ -141,6 +136,65 @@ app.delete('/:collection', async (req, res) => {
 });
 
 app.get('/favicon.ico', (req, res) => res.status(204).end());
+
+// FRIENDS API ROUTES
+
+const ROBLOX_FRIENDS_BASE = 'https://friends.roblox.com/v1';
+
+function getHeaders(cookie) {
+  return {
+    Cookie: `.ROBLOSECURITY=${cookie}`,
+    'Content-Type': 'application/json'
+  };
+}
+
+app.post('/friends/send', async (req, res) => {
+  const { targetUserId, authCookie } = req.body;
+  try {
+    const response = await axios.post(`${ROBLOX_FRIENDS_BASE}/users/${targetUserId}/request-friendship`, {}, {
+      headers: getHeaders(authCookie)
+    });
+    res.json(response.data);
+  } catch (err) {
+    res.status(400).json({ error: 'Failed to send friend request', details: err.response?.data });
+  }
+});
+
+app.post('/friends/accept', async (req, res) => {
+  const { requesterUserId, authCookie } = req.body;
+  try {
+    const response = await axios.post(`${ROBLOX_FRIENDS_BASE}/users/${requesterUserId}/accept-friend-request`, {}, {
+      headers: getHeaders(authCookie)
+    });
+    res.json(response.data);
+  } catch (err) {
+    res.status(400).json({ error: 'Failed to accept friend request', details: err.response?.data });
+  }
+});
+
+app.post('/friends/decline', async (req, res) => {
+  const { requesterUserId, authCookie } = req.body;
+  try {
+    const response = await axios.post(`${ROBLOX_FRIENDS_BASE}/users/${requesterUserId}/decline-friend-request`, {}, {
+      headers: getHeaders(authCookie)
+    });
+    res.json(response.data);
+  } catch (err) {
+    res.status(400).json({ error: 'Failed to decline friend request', details: err.response?.data });
+  }
+});
+
+app.post('/friends/remove', async (req, res) => {
+  const { targetUserId, authCookie } = req.body;
+  try {
+    const response = await axios.post(`${ROBLOX_FRIENDS_BASE}/users/${targetUserId}/unfriend`, {}, {
+      headers: getHeaders(authCookie)
+    });
+    res.json(response.data);
+  } catch (err) {
+    res.status(400).json({ error: 'Failed to unfriend user', details: err.response?.data });
+  }
+});
 
 const start = async () => {
   try {
