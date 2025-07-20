@@ -2,7 +2,6 @@ import express from 'express';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import cors from 'cors';
-import axios from 'axios';
 
 dotenv.config();
 
@@ -13,6 +12,7 @@ app.use(express.json());
 const PORT = process.env.PORT || 3000;
 const models = {};
 
+// Dynamisch schema genereren op basis van de collectie
 function getModel(collection) {
   if (!models[collection]) {
     const schema = new mongoose.Schema({}, { strict: false, timestamps: true });
@@ -25,6 +25,7 @@ app.get('/', (req, res) => {
   res.send('API is live');
 });
 
+// Create of update (upsert)
 app.post('/:collection', async (req, res) => {
   try {
     const collection = req.params.collection;
@@ -41,6 +42,7 @@ app.post('/:collection', async (req, res) => {
   }
 });
 
+// Read all (met query opties)
 app.get('/:collection', async (req, res) => {
   try {
     const collection = req.params.collection;
@@ -74,6 +76,7 @@ app.get('/:collection', async (req, res) => {
   }
 });
 
+// Read by ID
 app.get('/:collection/:id', async (req, res) => {
   try {
     const Model = getModel(req.params.collection);
@@ -85,6 +88,7 @@ app.get('/:collection/:id', async (req, res) => {
   }
 });
 
+// Update by ID
 app.put('/:collection/:id', async (req, res) => {
   try {
     const Model = getModel(req.params.collection);
@@ -96,6 +100,7 @@ app.put('/:collection/:id', async (req, res) => {
   }
 });
 
+// Delete by ID
 app.delete('/:collection/:id', async (req, res) => {
   try {
     const Model = getModel(req.params.collection);
@@ -107,6 +112,7 @@ app.delete('/:collection/:id', async (req, res) => {
   }
 });
 
+// Bulk update
 app.put('/:collection', async (req, res) => {
   try {
     const { filter, update } = req.body;
@@ -120,6 +126,7 @@ app.put('/:collection', async (req, res) => {
   }
 });
 
+// Bulk delete
 app.delete('/:collection', async (req, res) => {
   try {
     const { filter } = req.body;
@@ -135,67 +142,7 @@ app.delete('/:collection', async (req, res) => {
 
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 
-const ROBLOX_FRIENDS_BASE = 'https://friends.roblox.com/v1';
-
-function getHeaders(cookie) {
-  return {
-    Cookie: `.ROBLOSECURITY=${cookie}`,
-    'Content-Type': 'application/json'
-  };
-}
-
-app.post('/friends/send', async (req, res) => {
-  const { targetUserId } = req.body;
-  const authCookie = process.env.ROBLOX_COOKIE;
-  try {
-    const response = await axios.post(`${ROBLOX_FRIENDS_BASE}/users/${targetUserId}/request-friendship`, {}, {
-      headers: getHeaders(authCookie)
-    });
-    res.json(response.data);
-  } catch (err) {
-    res.status(400).json({ error: 'Failed to send friend request', details: err.response?.data });
-  }
-});
-
-app.post('/friends/accept', async (req, res) => {
-  const { requesterUserId } = req.body;
-  const authCookie = process.env.ROBLOX_COOKIE;
-  try {
-    const response = await axios.post(`${ROBLOX_FRIENDS_BASE}/users/${requesterUserId}/accept-friend-request`, {}, {
-      headers: getHeaders(authCookie)
-    });
-    res.json(response.data);
-  } catch (err) {
-    res.status(400).json({ error: 'Failed to accept friend request', details: err.response?.data });
-  }
-});
-
-app.post('/friends/decline', async (req, res) => {
-  const { requesterUserId } = req.body;
-  const authCookie = process.env.ROBLOX_COOKIE;
-  try {
-    const response = await axios.post(`${ROBLOX_FRIENDS_BASE}/users/${requesterUserId}/decline-friend-request`, {}, {
-      headers: getHeaders(authCookie)
-    });
-    res.json(response.data);
-  } catch (err) {
-    res.status(400).json({ error: 'Failed to decline friend request', details: err.response?.data });
-  }
-});
-
-app.post('/friends/remove', async (req, res) => {
-  const { targetUserId } = req.body;
-  const authCookie = process.env.ROBLOX_COOKIE;
-  try {
-    const response = await axios.post(`${ROBLOX_FRIENDS_BASE}/users/${targetUserId}/unfriend`, {}, {
-      headers: getHeaders(authCookie)
-    });
-    res.json(response.data);
-  } catch (err) {
-    res.status(400).json({ error: 'Failed to unfriend user', details: err.response?.data });
-  }
-});
-
+// Connectie starten
 const start = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI);
