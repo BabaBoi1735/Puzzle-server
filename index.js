@@ -6,24 +6,12 @@ import cors from 'cors';
 dotenv.config();
 
 const app = express();
-
-// CORS opties, met expliciete allowed headers
-const corsOptions = {
-  origin: '*', // Of specificeer je frontend url(s) hier
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
-  optionsSuccessStatus: 204
-};
-
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // Preflight requests goed afhandelen
-
+app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 const models = {};
 
-// Dynamisch schema genereren op basis van de collectie
 function getModel(collection) {
   if (!models[collection]) {
     const schema = new mongoose.Schema({}, { strict: false, timestamps: true });
@@ -36,7 +24,6 @@ app.get('/', (req, res) => {
   res.send('API is live');
 });
 
-// Create of update (upsert)
 app.post('/:collection', async (req, res) => {
   try {
     const collection = req.params.collection;
@@ -53,7 +40,6 @@ app.post('/:collection', async (req, res) => {
   }
 });
 
-// Read all (met query opties)
 app.get('/:collection', async (req, res) => {
   try {
     const collection = req.params.collection;
@@ -87,7 +73,6 @@ app.get('/:collection', async (req, res) => {
   }
 });
 
-// Read by ID
 app.get('/:collection/:id', async (req, res) => {
   try {
     const Model = getModel(req.params.collection);
@@ -99,7 +84,6 @@ app.get('/:collection/:id', async (req, res) => {
   }
 });
 
-// Update by ID
 app.put('/:collection/:id', async (req, res) => {
   try {
     const Model = getModel(req.params.collection);
@@ -111,7 +95,6 @@ app.put('/:collection/:id', async (req, res) => {
   }
 });
 
-// Delete by ID
 app.delete('/:collection/:id', async (req, res) => {
   try {
     const Model = getModel(req.params.collection);
@@ -123,7 +106,6 @@ app.delete('/:collection/:id', async (req, res) => {
   }
 });
 
-// Bulk update
 app.put('/:collection', async (req, res) => {
   try {
     const { filter, update } = req.body;
@@ -137,7 +119,6 @@ app.put('/:collection', async (req, res) => {
   }
 });
 
-// Bulk delete
 app.delete('/:collection', async (req, res) => {
   try {
     const { filter } = req.body;
@@ -153,7 +134,6 @@ app.delete('/:collection', async (req, res) => {
 
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 
-// Connectie starten
 const start = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI);
