@@ -6,7 +6,18 @@ import cors from 'cors';
 dotenv.config();
 
 const app = express();
-app.use(cors());
+
+// CORS opties, met expliciete allowed headers
+const corsOptions = {
+  origin: '*', // Of specificeer je frontend url(s) hier
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  optionsSuccessStatus: 204
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Preflight requests goed afhandelen
+
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
