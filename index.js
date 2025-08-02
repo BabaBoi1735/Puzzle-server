@@ -20,11 +20,21 @@ function getModel(collection) {
   return models[collection];
 }
 
+function requireData(req, res, next) {
+  if (req.method === 'GET' && (!req.query.filter && !req.params.id)) {
+    return res.status(400).json({ error: 'Filter or ID is required to access this resource.' });
+  }
+  if ((req.method === 'POST' || req.method === 'PUT' || req.method === 'DELETE') && !Object.keys(req.body).length) {
+    return res.status(400).json({ error: 'Request body required' });
+  }
+  next();
+}
+
 app.get('/', (req, res) => {
   res.send('API is live');
 });
 
-app.post('/:collection', async (req, res) => {
+app.post('/:collection', requireData, async (req, res) => {
   try {
     const collection = req.params.collection;
     const Model = getModel(collection);
@@ -40,19 +50,29 @@ app.post('/:collection', async (req, res) => {
   }
 });
 
-app.get('/:collection', async (req, res) => {
+app.get('/:collection/:id', requireData, async (req, res) => {
+  try {
+    const Model = getModel(req.params.collection);
+    const doc = await Model.findById(req.params.id);
+    if (!doc) return res.status(404).json({ error: 'Not found' });
+    res.json(doc);
+  } catch (err) {
+    res.status(500).json({ error: 'Read by ID failed', details: err.message });
+  }
+});
+
+app.get('/:collection', requireData, async (req, res) => {
   try {
     const collection = req.params.collection;
     const Model = getModel(collection);
     let mongoFilter = {};
-    if (req.query.filter) {
-      try {
-        mongoFilter = JSON.parse(req.query.filter);
-      } catch {
-        return res.status(400).json({ error: 'Invalid JSON in filter' });
-      }
+    try {
+      mongoFilter = JSON.parse(req.query.filter);
+    } catch {
+      return res.status(400).json({ error: 'Invalid JSON in filter' });
     }
     const query = Model.find(mongoFilter);
+
     if (req.query.sort) {
       const sortParams = {};
       req.query.sort.split(',').forEach(f => {
@@ -66,6 +86,7 @@ app.get('/:collection', async (req, res) => {
     }
     if (req.query.limit) query.limit(parseInt(req.query.limit));
     if (req.query.skip) query.skip(parseInt(req.query.skip));
+
     const docs = await query.exec();
     res.json(docs);
   } catch (err) {
@@ -73,18 +94,7 @@ app.get('/:collection', async (req, res) => {
   }
 });
 
-app.get('/:collection/:id', async (req, res) => {
-  try {
-    const Model = getModel(req.params.collection);
-    const doc = await Model.findById(req.params.id);
-    if (!doc) return res.status(404).json({ error: 'Not found' });
-    res.json(doc);
-  } catch (err) {
-    res.status(500).json({ error: 'Read by ID failed', details: err.message });
-  }
-});
-
-app.put('/:collection/:id', async (req, res) => {
+app.put('/:collection/:id', requireData, async (req, res) => {
   try {
     const Model = getModel(req.params.collection);
     const updated = await Model.findByIdAndUpdate(req.params.id, req.body, { new: true });
@@ -95,7 +105,7 @@ app.put('/:collection/:id', async (req, res) => {
   }
 });
 
-app.delete('/:collection/:id', async (req, res) => {
+app.delete('/:collection/:id', requireData, async (req, res) => {
   try {
     const Model = getModel(req.params.collection);
     const deleted = await Model.findByIdAndDelete(req.params.id);
@@ -106,7 +116,7 @@ app.delete('/:collection/:id', async (req, res) => {
   }
 });
 
-app.put('/:collection', async (req, res) => {
+app.put('/:collection', requireData, async (req, res) => {
   try {
     const { filter, update } = req.body;
     if (!filter || !update) return res.status(400).json({ error: 'filter and update required' });
@@ -119,7 +129,7 @@ app.put('/:collection', async (req, res) => {
   }
 });
 
-app.delete('/:collection', async (req, res) => {
+app.delete('/:collection', requireData, async (req, res) => {
   try {
     const { filter } = req.body;
     if (!filter) return res.status(400).json({ error: 'filter required' });
